@@ -39,29 +39,49 @@
 
 ‏ZCode RTL **هیچ فایلی از برنامه را تغییر نمی‌دهد**: از پورت DevTools خود کرومیومِ برنامه استفاده می‌کند و یک استایل‌شیت در زمان اجرا تزریق می‌کند. آپدیت‌های برنامه اثری رویش ندارند، دسترسی ادمین نمی‌خواهد و حذفش یک دستور است.
 
-## 🚀 نصب (یک روش را انتخاب کنید)
+## 🚀 نصب
 
-**یک دستور** — در PowerShell:
+### نصب خیلی سریع — یک قدم و تمام
+
+**‏ویندوز** — یا **نصب‌کننده**: `ZCodeRTL-Setup-*.exe` را از [Releases](../../releases) دانلود و دابل‌کلیک کنید (فایل‌ها و شورتکات **ZCode RTL** را خودش می‌سازد) — یا **یک دستور** در PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/ahmadkhanloo/ZCodeRTL/main/install.ps1 | iex
 ```
 
-**یا** کلون و نصب:
+**‏لینوکس / مک** — یک دستور در ترمینال:
 
-```powershell
-git clone https://github.com/ahmadkhanloo/ZCodeRTL.git
-cd ZCodeRTL
-powershell -ExecutionPolicy Bypass -File install.ps1
+```bash
+curl -fsSL https://raw.githubusercontent.com/ahmadkhanloo/ZCodeRTL/main/install.sh | bash
 ```
 
-**یا** زیپ را از [Releases](../../releases) بگیرید، باز کنید و `install.ps1` را اجرا کنید.
+‏در هر دو حالت یک لانچر **ZCode RTL** خواهید داشت: شورتکات دسکتاپ در ویندوز، گزینهٔ منوی برنامه‌ها (و آیکون دسکتاپ) در لینوکس، و `ZCode RTL.app` در `~/Applications` در مک. ZCode را با همان باز کنید — RTL خودکار است.
 
-‏پیش‌نیازها: **ویندوز**، نصب‌بودن [ZCode](https://z.ai) و **Node.js نسخهٔ ۲۱ به بالا** (از WebSocket داخلی آن استفاده می‌کند).
+> ‏نصب‌کنندهٔ ویندوز امضای دیجیتال ندارد، پس ممکن است SmartScreen اخطار بدهد (*More info → Run anyway*) و بعضی آنتی‌ویروس‌ها هم ممکن است آن را به اشتباه پرچم کنند. در آن صورت از یک‌لاینر استفاده کنید — یا فایل را با `checksums-sha256.txt` موجود در همان Release مقایسه کنید.
+
+### نصب حرفه‌ای — بازبینی کد، شخصی‌سازی، پرتابل
+
+‏اول کلون و بازبینی کنید، بعد از خود مخزن نصب کنید (از روی زیپ [Releases](../../releases) هم دقیقاً همین‌طور است):
+
+```bash
+git clone https://github.com/ahmadkhanloo/ZCodeRTL.git
+cd ZCodeRTL
+# worth a look: injector.mjs, launch.vbs / launch.sh, install.ps1 / install.sh
+powershell -ExecutionPolicy Bypass -File install.ps1   # Windows
+bash install.sh                                        # Linux / macOS
+```
+
+‏امکانات حرفه‌ای:
+
+- ‏**پورت دلخواه** — متغیر محیطی `ZCODE_RTL_PORT` (پیش‌فرض `9222`) را قبل از استفاده از لانچر تنظیم کنید؛ هم برنامه و هم injector از آن پیروی می‌کنند.
+- ‏**اجرا از سورس** — لانچر از هر پوشه‌ای کار می‌کند، پس یک کلون گیت می‌تواند خودش محل نصب باشد.
+- ‏**حذف تمیز** — `powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall` یا `bash install.sh --uninstall` (یا *Settings → Apps* برای Setup.exe).
+
+‏پیش‌نیاز (همهٔ پلتفرم‌ها): نصب‌بودن [ZCode](https://z.ai) و **Node.js نسخهٔ ۲۱ به بالا** روی PATH (از WebSocket داخلی آن استفاده می‌کند).
 
 ## ▶️ استفاده
 
-‏ZCode را کاملاً ببندید (از System Tray هم Exit بزنید) و بعد آن را با شورتکات جدید **ZCode RTL** روی دسکتاپ اجرا کنید. همین — از این به بعد پیام‌های فارسی راست‌به‌چپ دیده می‌شوند.
+‏ZCode را کاملاً ببندید (از System Tray هم Exit بزنید) و بعد آن را با لانچر جدید **ZCode RTL** اجرا کنید — شورتکات دسکتاپ در ویندوز، گزینهٔ منوی برنامه‌ها (و آیکون دسکتاپ) در لینوکس، و `ZCode RTL.app` در مک. همین — از این به بعد پیام‌های فارسی راست‌به‌چپ دیده می‌شوند.
 
 > ‏پورت دیباگ فقط وقتی وجود دارد که ZCode از طریق شورتکات اجرا شود؛ پس به‌جای آیکون معمولی از همین شورتکات استفاده کنید.
 
@@ -69,8 +89,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 
 - ‏**هنوز چپ‌به‌راست است؟** یعنی ZCode از آیکون معمولی باز شده. کاملاً ببندید و با **ZCode RTL** بازش کنید.
 - ‏**قبلاً کار می‌کرد و بعد از آپدیت خراب شد؟** آپدیت‌کننده برنامه را بدون پورت بازکرده. همان راه‌حل: بستن کامل → اجرا با شورتکات.
-- ‏**معلوم شود در حال اجراست؟** در Task Manager دنبال `node.exe` بگردید (همان injector مخفی).
-- ‏**حذف نصب:** ‏`powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall` — شورتکات و نسخهٔ دانلودشده را پاک می‌کند.
+- ‏**معلوم شود در حال اجراست؟** در ویندوز در Task Manager دنبال `node.exe` بگردید (همان injector مخفی)؛ در لینوکس/مک: `pgrep -f injector.mjs`.
+- ‏**حذف نصب:** ویندوز — `powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall` (اگر با نصب‌کننده نصب کرده‌اید از *Settings → Apps → ZCode RTL*)؛ لینوکس/مک — `bash install.sh --uninstall`.
 
 ## 🔒 نکتهٔ امنیتی
 
@@ -78,7 +98,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 
 ## ⚙️ چطور کار می‌کند
 
-‏`ZCode-RTL.cmd` برنامه را با `--remote-debugging-port=9222` اجرا می‌کند و یک اسکریپت Node حدوداً صدخطی (`injector.mjs`) را بالا می‌آورد که از طریق پروتکل DevTools کرومیوم یک قانون CSS به همهٔ پنجره‌ها تزریق می‌کند:
+‏یک لانچر برنامه را با `--remote-debugging-port=9222` اجرا می‌کند و یک اسکریپت Node حدوداً صدخطی (`injector.mjs`) را بالا می‌آورد که از طریق پروتکل DevTools کرومیوم یک قانون CSS به همهٔ پنجره‌ها تزریق می‌کند. لانچر در ویندوز `launch.vbs` است (که با `wscript.exe` اجرا می‌شود و به‌خودی‌خود هیچ پنجره‌ای باز نمی‌کند) و در لینوکس/مک `launch.sh`. پنجره‌های جدید از طریق رویداد `targetCreated` دیو‌تولز در لحظه تزریق می‌شوند و حلقهٔ polling فقط نقش شبکهٔ ایمن دارد:
 
 ```css
 :is(p, li, h1, h2, h3, blockquote, td, textarea, ...) {

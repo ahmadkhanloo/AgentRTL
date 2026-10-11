@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Setup.exe and portable zip
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found after installing Inno Setup" }
+          $ver = $env:GITHUB_REF_NAME -replace '^v', ''
+          & $iscc "/DMyAppVersion=$ver" installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # tar (bsdtar) writes a zip with proper forward-slash paths for POSIX users
+          tar -a -cf "dist/ZCodeRTL-$($env:GITHUB_REF_NAME).zip" install.ps1 install.sh launch.sh launch.vbs injector.mjs installer.iss LICENSE README.md README.fa.md docs
+          Get-ChildItem dist -File |
+            ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } |
+            Set-Content dist/checksums-sha256.txt
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/ZCodeRTL-Setup-*.exe
+            dist/ZCodeRTL-*.zip
+            dist/checksums-sha256.txt
+          generate_release_notes: true

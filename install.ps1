@@ -48,10 +48,11 @@ try { $nodeVer = [version]((node --version) -replace '^v', '') }
 catch { throw 'Node.js not found on PATH. Install Node 21+ from https://nodejs.org' }
 if ($nodeVer.Major -lt 21) { throw "Node >= 21 required (found v$nodeVer)." }
 
-# --- desktop shortcut ---
+# --- desktop shortcut: wscript launcher => zero console flash on start ---
 $ws  = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut($lnkPath)
-$lnk.TargetPath      = Join-Path $src 'ZCode-RTL.cmd'
+$lnk.TargetPath      = Join-Path $env:SystemRoot 'System32\wscript.exe'
+$lnk.Arguments      = '"' + (Join-Path $src 'launch.vbs') + '"'
 $lnk.IconLocation    = "$exe,0"
 $lnk.WorkingDirectory = $src
 $lnk.Save()

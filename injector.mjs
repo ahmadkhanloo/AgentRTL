@@ -5,9 +5,9 @@
 
 import { createServer } from 'node:net';
 
-const PORT = 9222;      // Chromium DevTools port ZCode is started with
-const LOCK_PORT = 9223; // ensures only one injector instance runs
-const POLL_MS = 2000;
+const PORT = Number(process.env.ZCODE_RTL_PORT) || 9222; // Chromium DevTools port ZCode is started with
+const LOCK_PORT = PORT + 1; // ensures only one injector instance runs
+const POLL_MS = 2000;   // safety-net sweep; new windows are injected in real time (see watchBrowser)
 
 const CSS = `
 :is(p,li,h1,h2,h3,h4,h5,h6,blockquote,td,th,dd,dt,figcaption,summary),
@@ -58,6 +58,7 @@ async function listPages() {
 
 function attach(target) {
   return new Promise((resolve) => {
+    injected.add(target.id); // immediately, so parallel callers never double-attach
     const ws = new WebSocket(target.webSocketDebuggerUrl);
     let nextId = 1;
     const pending = new Map();
@@ -74,7 +75,6 @@ function attach(target) {
         await send('Runtime.evaluate', { expression: INJECT_SOURCE });
         // survives page reloads for as long as this connection lives
         await send('Page.addScriptToEvaluateOnNewDocument', { source: INJECT_SOURCE });
-        injected.add(target.id);
         console.log(`[zcode-rtl] injected: ${target.title || target.url}`);
         resolve();
       } catch (e) {
@@ -94,9 +94,72 @@ function attach(target) {
   });
 }
 
+// Real-time path: instead of only polling, subscribe to the browser endpoint's
+// targetCreated events, so a new window is injected the moment it opens.
+function watchBrowser(wsUrl) {
+  return new Promise((resolve) => {
+    // resolves when the connection drops; the caller retries
+    const ws = new WebSocket(wsUrl);
+    let nextId = 1;
+    const pending = new Map();
+    const send = (method, params = {}) =>
+      new Promise((res) => {
+        const id = nextId++;
+        pending.set(id, res);
+        ws.send(JSON.stringify({ id, method, params }));
+      });
+
+    ws.addEventListener('open', async () => {
+      try {
+        await send('Target.setDiscoverTargets', { discover: true });
+        console.log('[zcode-rtl] watching for new windows in real time');
+      } catch {
+        resolve(); // the connection will drop and be retried
+      }
+    });
+    ws.addEventListener('message', (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.id && pending.has(msg.id)) {
+        pending.get(msg.id)(msg.result ?? msg.error);
+        pending.delete(msg.id);
+        return;
+      }
+      const info = msg.method === 'Target.targetCreated' && msg.params?.targetInfo;
+      if (info && info.type === 'page' && !info.url.startsWith('devtools://')) {
+        attach({
+          id: info.targetId,
+          title: info.title,
+          url: info.url,
+          webSocketDebuggerUrl: `ws://127.0.0.1:${PORT}/devtools/page/${info.targetId}`,
+        });
+      }
+    });
+    ws.addEventListener('close', () => resolve());
+    ws.addEventListener('error', () => resolve());
+  });
+}
+
+async function browserWsUrl() {
+  try {
+    const res = await fetch(`http://127.0.0.1:${PORT}/json/version`);
+    if (!res.ok) return null;
+    return (await res.json()).webSocketDebuggerUrl || null;
+  } catch {
+    return null; // app not started (yet) via the RTL shortcut
+  }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 console.log(`[zcode-rtl] waiting for ZCode on port ${PORT}...`);
 setInterval(async () => {
   for (const t of await listPages()) {
     if (!injected.has(t.id)) await attach(t);
   }
 }, POLL_MS);
+
+for (;;) {
+  const url = await browserWsUrl();
+  if (url) await watchBrowser(url);
+  await sleep(1000);
+}

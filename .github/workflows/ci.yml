@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: POSIX scripts (shellcheck + bash -n)
+        run: |
+          shellcheck -S warning launch.sh install.sh
+          bash -n launch.sh install.sh
+
+      - name: JavaScript (node --check)
+        run: node --check injector.mjs
+
+      - name: PowerShell (parser)
+        shell: pwsh
+        run: |
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/install.ps1", [ref]$null, [ref]$errs) | Out-Null
+          if ($errs) { $errs | ForEach-Object { $_.Message }; exit 1 } else { 'install.ps1 parse OK' }
+
+      - name: Workflow YAML
+        run: python3 -c "import yaml; [yaml.safe_load(open(f, encoding='utf-8')) for f in ['.github/workflows/ci.yml', '.github/workflows/release.yml']] and print('workflows OK')"
