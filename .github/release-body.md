@@ -11,7 +11,7 @@
 - **Windows** — the `.exe` above, or in PowerShell: `irm https://raw.githubusercontent.com/ahmadkhanloo/ZCodeRTL/main/install.ps1 | iex`
 - **Linux / macOS** — `curl -fsSL https://raw.githubusercontent.com/ahmadkhanloo/ZCodeRTL/main/install.sh | bash`
 
-Requirements: [ZCode](https://z.ai) and **Node.js ≥ 21**. The `.exe` is unsigned — Windows SmartScreen may warn (choose *More info → Run anyway*); you can verify the download against `checksums-sha256.txt`.
+Requirements: [ZCode](https://zcode.z.ai/invite/CF3ZEFJR) and **Node.js ≥ 21**. The `.exe` is unsigned — Windows SmartScreen may warn (choose *More info → Run anyway*); you can verify the download against `checksums-sha256.txt`.
 
 ---
 

@@ -77,7 +77,7 @@ bash install.sh                                        # Linux / macOS
 - ‏**اجرا از سورس** — لانچر از هر پوشه‌ای کار می‌کند، پس یک کلون گیت می‌تواند خودش محل نصب باشد.
 - ‏**حذف تمیز** — `powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall` یا `bash install.sh --uninstall` (یا *Settings → Apps* برای Setup.exe).
 
-‏پیش‌نیاز (همهٔ پلتفرم‌ها): نصب‌بودن [ZCode](https://z.ai) و **Node.js نسخهٔ ۲۱ به بالا** روی PATH (از WebSocket داخلی آن استفاده می‌کند).
+‏پیش‌نیاز (همهٔ پلتفرم‌ها): نصب‌بودن [ZCode](https://zcode.z.ai/invite/CF3ZEFJR) (هنوز نصبش نکردید؟ این لینک دعوت است 😉) و **Node.js نسخهٔ ۲۱ به بالا** روی PATH (از WebSocket داخلی آن استفاده می‌کند).
 
 ## ▶️ استفاده
 

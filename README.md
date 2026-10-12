@@ -80,7 +80,7 @@ What professionals get:
 - **Run from source** — the launcher works from any folder, so a git checkout can be the install location itself.
 - **Clean uninstall** — `powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall` or `bash install.sh --uninstall` (or *Settings → Apps* for the Setup.exe).
 
-Requirements (all platforms): [ZCode](https://z.ai) installed and **Node.js ≥ 21** on PATH (its built-in WebSocket is used).
+Requirements (all platforms): [ZCode](https://zcode.z.ai/invite/CF3ZEFJR) installed (new here? that's an invite link 😉) and **Node.js ≥ 21** on PATH (its built-in WebSocket is used).
 
 ## ▶️ Use
 
