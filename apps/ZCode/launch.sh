@@ -33,6 +33,11 @@ if ! command -v node >/dev/null 2>&1; then
   echo "[ZCode RTL] Node.js not found on PATH. Install Node 21+ from https://nodejs.org" >&2
   exit 1
 fi
+NODE_MAJOR="$(node --version | sed 's/^v//' | cut -d. -f1)"
+if [ "$NODE_MAJOR" -lt 21 ]; then
+  echo "[ZCode RTL] Node.js 21 or newer is required (found $(node --version))." >&2
+  exit 1
+fi
 
 nohup "$EXE" --remote-debugging-port=$PORT >/dev/null 2>&1 &
 nohup node "$DIR/injector.mjs" >/dev/null 2>&1 &

@@ -1,66 +1,100 @@
-# ZCode RTL - one-click installer
-#
-#   Install:   powershell -ExecutionPolicy Bypass -File install.ps1
-#   One-liner: irm https://raw.githubusercontent.com/ahmadkhanloo/ZCodeRTL/main/install.ps1 | iex
-#   Uninstall: powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall
-param([switch]$Uninstall)
+# Create desktop shortcuts for a source checkout.
+param([string]$Apps = 'zcode', [switch]$Uninstall, [switch]$WhatIf)
 
 $ErrorActionPreference = 'Stop'
-$repo    = 'https://github.com/ahmadkhanloo/ZCodeRTL'
-$dest    = "$env:LOCALAPPDATA\ZCodeRTL"
-$desk    = [Environment]::GetFolderPath('Desktop')
-$lnkPath = "$desk\ZCode RTL.lnk"
+$zcodeExe = @(
+  "$env:ProgramFiles\ZCode\ZCode.exe",
+  "${env:ProgramFiles(x86)}\ZCode\ZCode.exe",
+  "$env:LOCALAPPDATA\Programs\ZCode\ZCode.exe"
+) | Where-Object { Test-Path -PathType Leaf $_ } | Select-Object -First 1
+$definitions = @{
+  zcode = @{ Name = 'ZCode RTL'; Dir = 'ZCode'; Exe = $zcodeExe }
+  qoder = @{ Name = 'Qoder RTL'; Dir = 'Qoder'; Exe = $null }
+  deepseek = @{ Name = 'DeepSeek Harness RTL'; Dir = 'DeepSeekHarness'; Exe = "$env:LOCALAPPDATA\Programs\DeepSeek Harness\DeepSeek Harness.exe" }
+}
+$desktop = [Environment]::GetFolderPath('Desktop')
+$shell = New-Object -ComObject WScript.Shell
+$wscript = Join-Path $env:SystemRoot 'System32\wscript.exe'
 
-# --- uninstall: remove shortcut + downloaded copy, keep local checkouts ---
+function Test-OwnedShortcut([string]$Path, [string]$Launcher) {
+  if (-not (Test-Path -LiteralPath $Path)) { return $false }
+  $shortcut = $shell.CreateShortcut($Path)
+  if ($shortcut.TargetPath -ine $wscript) { return $false }
+  $target = $shortcut.Arguments.Trim().Trim('"')
+  try { return [IO.Path]::GetFullPath($target) -ieq [IO.Path]::GetFullPath($Launcher) }
+  catch { return $false }
+}
+
 if ($Uninstall) {
-  if (Test-Path $lnkPath) { Remove-Item $lnkPath -Force; Write-Host "Removed: $lnkPath" }
-  if (Test-Path $dest)    { Remove-Item $dest -Recurse -Force; Write-Host "Removed: $dest" }
-  Write-Host ''
-  Write-Host 'ZCode RTL removed.'
-  Write-Host 'If a background node.exe injector is still running it is harmless and stops at next reboot (or kill it in Task Manager).'
+  $cleanup = Join-Path $PSScriptRoot 'cleanup.ps1'
+  if (Test-Path -LiteralPath $cleanup) {
+    if ($WhatIf) { Write-Host "would stop injectors owned by: $PSScriptRoot" }
+    else { & (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -NoProfile -ExecutionPolicy Bypass -File $cleanup -Root $PSScriptRoot }
+  }
+  foreach ($app in $definitions.Values) {
+    $shortcut = Join-Path $desktop ($app.Name + '.lnk')
+    $launcher = Join-Path (Join-Path $PSScriptRoot ("apps\" + $app.Dir)) 'launch.vbs'
+    if (Test-OwnedShortcut $shortcut $launcher) {
+      if ($WhatIf) { Write-Host "would remove: $shortcut" }
+      else { Remove-Item -LiteralPath $shortcut -Force; Write-Host "Removed: $shortcut" }
+    } elseif (Test-Path -LiteralPath $shortcut) {
+      Write-Host "Skipped shortcut owned by another install: $shortcut"
+    }
+  }
   exit 0
 }
 
-# --- resolve source: this folder, or a fresh download (one-liner mode) ---
-$src = $PSScriptRoot
-if (-not (Test-Path (Join-Path $src 'injector.mjs'))) {
-  Write-Host 'Downloading ZCodeRTL...'
-  $zip = "$env:TEMP\ZCodeRTL.zip"
-  Invoke-WebRequest "$repo/archive/refs/heads/main.zip" -OutFile $zip
-  $tmp = "$env:TEMP\ZCodeRTL-extract"
-  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
-  Expand-Archive $zip $tmp -Force
-  if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
-  Move-Item (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName $dest
-  Remove-Item $tmp -Recurse -Force
-  Remove-Item $zip -Force
-  $src = $dest
+$requested = @($Apps -split '[,\s]+' | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ } | ForEach-Object { if ($_ -eq 'deepseek-harness') { 'deepseek' } else { $_ } } | Select-Object -Unique)
+if (-not $requested.Count) { throw 'Choose at least one app with -Apps zcode,qoder,deepseek.' }
+foreach ($name in $requested) {
+  if (-not $definitions.ContainsKey($name)) { throw "Unknown app '$name'. Choose zcode, qoder, or deepseek." }
 }
 
-# --- requirements: ZCode + Node >= 21 (needs the built-in WebSocket) ---
-$exe = "$env:ProgramFiles\ZCode\ZCode.exe",
-       "$env:LOCALAPPDATA\Programs\ZCode\ZCode.exe",
-       "${env:ProgramFiles(x86)}\ZCode\ZCode.exe" |
-  Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $exe) { throw 'ZCode.exe not found in standard locations. Install ZCode first.' }
+try {
+  $node = Get-Command node -ErrorAction Stop
+  $version = [version]((node --version) -replace '^v', '')
+  if ($version.Major -lt 21) { throw "Node.js 21 or newer is required (found v$version)." }
+} catch {
+  throw 'Node.js 21 or newer is required. Install it from https://nodejs.org.'
+}
 
-try { $nodeVer = [version]((node --version) -replace '^v', '') }
-catch { throw 'Node.js not found on PATH. Install Node 21+ from https://nodejs.org' }
-if ($nodeVer.Major -lt 21) { throw "Node >= 21 required (found v$nodeVer)." }
+$powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+foreach ($name in $requested) {
+  $app = $definitions[$name]
+  $folder = Join-Path $PSScriptRoot ("apps\" + $app.Dir)
+  foreach ($file in 'launch.vbs', 'start.ps1', 'injector.mjs') {
+    if (-not (Test-Path -LiteralPath (Join-Path $folder $file))) { throw "Missing $file for $name in $folder." }
+  }
+  if ($name -eq 'qoder') {
+    $discovery = & $powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $folder 'start.ps1') -Discover 2>&1
+    $resolved = @($discovery | Where-Object { $_ -match '^[A-Za-z]:\\' } | Select-Object -Last 1)
+    if ($resolved.Count) { $app.Exe = $resolved[0].Trim() }
+  }
+  if (-not $app.Exe -or -not (Test-Path -PathType Leaf $app.Exe)) {
+    throw "$($app.Name) was selected, but its app was not found. Install it first."
+  }
+}
 
-# --- desktop shortcut: wscript launcher => zero console flash on start ---
-$ws  = New-Object -ComObject WScript.Shell
-$lnk = $ws.CreateShortcut($lnkPath)
-$lnk.TargetPath      = Join-Path $env:SystemRoot 'System32\wscript.exe'
-$lnk.Arguments      = '"' + (Join-Path $src 'launch.vbs') + '"'
-$lnk.IconLocation    = "$exe,0"
-$lnk.WorkingDirectory = $src
-$lnk.Save()
-
-Write-Host ''
-Write-Host 'ZCode RTL installed.'
-Write-Host "  App:      $exe"
-Write-Host "  Files:    $src"
-Write-Host "  Shortcut: $lnkPath"
-Write-Host ''
-Write-Host 'Next: fully close ZCode (also from the tray), then start it via the "ZCode RTL" shortcut.'
+foreach ($name in $requested) {
+  $app = $definitions[$name]
+  $folder = Join-Path $PSScriptRoot ("apps\" + $app.Dir)
+  $shortcut = Join-Path $desktop ($app.Name + '.lnk')
+  $launcher = Join-Path $folder 'launch.vbs'
+  if ($WhatIf) {
+    Write-Host "would create: $shortcut"
+    Write-Host "  Launcher: $launcher"
+    Write-Host "  Icon:     $($app.Exe), 0"
+  } else {
+    if ((Test-Path -LiteralPath $shortcut) -and -not (Test-OwnedShortcut $shortcut $launcher)) {
+      throw "Shortcut already points to another install: $shortcut. Remove or rename it before installing from this checkout."
+    }
+    $link = $shell.CreateShortcut($shortcut)
+    $link.TargetPath = $wscript
+    $link.Arguments = '"' + $launcher + '"'
+    $link.IconLocation = "$($app.Exe),0"
+    $link.WorkingDirectory = $folder
+    $link.Description = "Run $($app.Name)"
+    $link.Save()
+    Write-Host "Created: $shortcut"
+  }
+}

@@ -22,8 +22,7 @@ jobs:
           $ver = $env:GITHUB_REF_NAME -replace '^v', ''
           & $iscc "/DMyAppVersion=$ver" installer.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          # tar (bsdtar) writes a zip with proper forward-slash paths for POSIX users
-          tar -a -cf "dist/ZCodeRTL-$($env:GITHUB_REF_NAME).zip" install.ps1 install.sh launch.sh launch.vbs injector.mjs installer.iss LICENSE README.md README.fa.md docs
+          tar -a -cf "dist/AgentRTL-$($env:GITHUB_REF_NAME).zip" install.ps1 cleanup.ps1 install.sh installer.iss LICENSE README.md README.fa.md apps docs
           Get-ChildItem dist -File |
             ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } |
             Set-Content dist/checksums-sha256.txt
@@ -33,7 +32,7 @@ jobs:
         with:
           body_path: .github/release-body.md
           files: |
-            dist/ZCodeRTL-Setup-*.exe
-            dist/ZCodeRTL-*.zip
+            dist/AgentRTL-Setup-*.exe
+            dist/AgentRTL-*.zip
             dist/checksums-sha256.txt
           generate_release_notes: true

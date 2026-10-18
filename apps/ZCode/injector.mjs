@@ -33,13 +33,13 @@ const INJECT_SOURCE = `(() => {
   else document.addEventListener('DOMContentLoaded', add, { once: true });
 })();`;
 
-// exit early if another injector instance is already running
+// Keep the app-specific lock bound for this process lifetime.
 const lock = createServer();
 lock.once('error', () => {
   console.log('[zcode-rtl] injector already running, exiting.');
   process.exit(0);
 });
-lock.listen(LOCK_PORT, '127.0.0.1', () => lock.close());
+lock.listen(LOCK_PORT, '127.0.0.1');
 
 const injected = new Set();
 
