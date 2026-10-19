@@ -3,7 +3,7 @@
 #define MyAppPublisher "ahmadkhanloo"
 #define MyAppURL "https://github.com/ahmadkhanloo/AgentRTL"
 #ifndef MyAppVersion
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.2.2"
 #endif
 
 [Setup]
@@ -164,7 +164,7 @@ begin
   QoderFilePage.Add('Qoder executable:', 'Executable files (*.exe)|*.exe', '.exe');
   QoderFilePage.Values[0] := GetQoderExe('');
 
-  SavedPathFile := ExpandConstant('{app}\apps\Qoder\qoder-path.txt');
+  SavedPathFile := PathCombine(WizardDirValue(), 'apps\Qoder\qoder-path.txt');
   if LoadStringsFromFile(SavedPathFile, SavedPaths) and
     (GetArrayLength(SavedPaths) > 0) and IsQoderExe(Trim(SavedPaths[0])) then
     QoderFilePage.Values[0] := Trim(SavedPaths[0]);
