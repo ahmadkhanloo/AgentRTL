@@ -42,7 +42,7 @@ Qoder RTL **touches nothing inside the app**: it uses Qoder's own Chromium DevTo
 
 ## 🚀 Install
 
-Windows only (Qoder's install layout here is `%LOCALAPPDATA%\Programs\Qoder`).
+Windows only. Older Qoder releases install under `%LOCALAPPDATA%\Programs\Qoder`; newer releases use `%LOCALAPPDATA%\Programs\Qoder IDE`. The RTL launcher detects both layouts.
 
 ### Quick install — one step, done
 
@@ -71,7 +71,9 @@ cd AgentRTL
 | Variable | Default | What it does |
 |---|---|---|
 | `QODER_RTL_PORT` | `9225` | DevTools port; the injector's lock sits one port above |
-| `QODER_RTL_EXE` | auto-detected | Full path to `Qoder.exe`, if you keep it somewhere unusual |
+| `QODER_RTL_EXE` | auto-detected | Full path to `Qoder.exe` or `Qoder IDE.exe`, if you keep it somewhere unusual |
+
+When using AgentRTL Setup, select Qoder RTL and choose the executable with Browse on the next page if automatic detection fails or Qoder is installed in a custom location. The selected path is saved for future launches.
 
 Version detection picks only a folder under `.qoder-versions\` that actually contains `resources\app.asar`; a version holding `app.asar.qoder-pending` is a staged update that cannot start, so it is skipped instead of picked by "highest version number".
 
@@ -111,7 +113,7 @@ node doctor.mjs --shot      # before/after PNG of the chat area
     ForEach-Object { Stop-Process -Id $_.ProcessId }
   ```
 
-- **Qoder not found by the launcher?** Set `QODER_RTL_EXE` to the full path of `Qoder.exe`.
+- **Qoder not found by the launcher?** Select `Qoder.exe` or `Qoder IDE.exe` with Browse in Setup, or set `QODER_RTL_EXE` to the full executable path.
 - **Uninstall:** use the source-checkout command above, or uninstall **AgentRTL** through Settings → Apps if you used Setup.
 
 ## 🔒 Security note

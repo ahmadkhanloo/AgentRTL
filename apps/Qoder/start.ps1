@@ -44,6 +44,11 @@ function Owns-InjectorLock($Owner, [string]$InjectorPath) {
   return $proc -and $proc.Name -ieq 'node.exe' -and $proc.CommandLine -match [regex]::Escape($InjectorPath)
 }
 
+function Get-RunningQoder {
+  Get-CimInstance Win32_Process -Filter "Name='Qoder.exe' OR Name='Qoder IDE.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -notmatch '--type=' }
+}
+
 # --- locate the activated build: only a folder whose resources\app.asar exists
 #     can start (0.4.7 / 0.4.8 here hold app.asar.qoder-pending and would fail) ---
 function Find-Qoder {
@@ -51,21 +56,37 @@ function Find-Qoder {
     if (Test-Path -PathType Leaf $env:QODER_RTL_EXE) { return $env:QODER_RTL_EXE }
     throw "QODER_RTL_EXE is set but not a file: $env:QODER_RTL_EXE"
   }
-  $running = Get-CimInstance Win32_Process -Filter "Name='Qoder.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -notmatch '--type=' } | Select-Object -First 1
+  $savedPathFile = Join-Path $Dir 'qoder-path.txt'
+  if (Test-Path -LiteralPath $savedPathFile) {
+    try { $savedPath = ([System.IO.File]::ReadAllText($savedPathFile, [System.Text.Encoding]::UTF8)).Trim() }
+    catch { $savedPath = '' }
+    if ($savedPath -and (Test-Path -PathType Leaf $savedPath)) { return $savedPath }
+  }
+  $running = Get-RunningQoder | Select-Object -First 1
   if ($running) {
     $root = Split-Path -Parent $running.ExecutablePath
     if (Test-Path (Join-Path $root 'resources\app.asar')) { return $running.ExecutablePath }
   }
-  $base = Join-Path $env:LOCALAPPDATA 'Programs\Qoder'
-  $versions = Get-ChildItem (Join-Path $base '.qoder-versions') -Directory -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -match '^\d+(\.\d+){2,3}$' } |
-    Where-Object { Test-Path (Join-Path $_.FullName 'resources\app.asar') } |
-    Sort-Object { [version]$_.Name } -Descending
-  if ($versions) { return (Join-Path $versions[0].FullName 'Qoder.exe') }
-  $flat = Join-Path $base 'Qoder.exe'
-  if ((Test-Path -PathType Leaf $flat) -and (Test-Path (Join-Path $base 'resources\app.asar'))) { return $flat }
-  throw 'Qoder.exe was not found. Set QODER_RTL_EXE to its full path.'
+  foreach ($base in @(
+    (Join-Path $env:LOCALAPPDATA 'Programs\Qoder IDE'),
+    (Join-Path $env:LOCALAPPDATA 'Programs\Qoder')
+  )) {
+    $versions = Get-ChildItem (Join-Path $base '.qoder-versions') -Directory -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -match '^\d+(\.\d+){2,3}$' } |
+      Where-Object { Test-Path (Join-Path $_.FullName 'resources\app.asar') } |
+      Sort-Object { [version]$_.Name } -Descending
+    foreach ($version in $versions) {
+      foreach ($name in @('Qoder IDE.exe', 'Qoder.exe')) {
+        $candidate = Join-Path $version.FullName $name
+        if (Test-Path -PathType Leaf $candidate) { return $candidate }
+      }
+    }
+    foreach ($name in @('Qoder IDE.exe', 'Qoder.exe')) {
+      $flat = Join-Path $base $name
+      if ((Test-Path -PathType Leaf $flat) -and (Test-Path (Join-Path $base 'resources\app.asar'))) { return $flat }
+    }
+  }
+  throw 'Qoder was not found. Set QODER_RTL_EXE to its full path.'
 }
 
 try {
@@ -101,8 +122,7 @@ if ($owner) {
   }
   Say "port $Port is open but the injector died - restarting it."
 } else {
-  $main = Get-CimInstance Win32_Process -Filter "Name='Qoder.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -notmatch '--type=' -and $_.ExecutablePath -ieq $exe }
+  $main = Get-RunningQoder | Where-Object { $_.ExecutablePath -ieq $exe }
   if ($main) {
     Say "Qoder is already running without the DevTools port, so a second start would just re-use it.`n`nFully quit Qoder (window + tray), then start it again with the Qoder RTL shortcut." 48
     exit 1
